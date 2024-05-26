@@ -15,130 +15,196 @@ def display():
     st.dataframe(df, use_container_width=True)
     st.write("\n")
 
-## TODO: Add option to select multiple columns at once to remove.
+
 def remove_feature():
     df = st.session_state.df
     col_list = df.columns.tolist()
-    st.subheader("Select the feature to remove")
-    feature = st.selectbox("Features in dataframe are: ", col_list)
-
+    st.subheader("Select the features to remove")
+    features = st.multiselect("Features in dataframe are:", col_list)
     if st.button("Remove", key="remove_button"):
-        df.drop(feature, axis=1, inplace=True)
-        df.dropduplicates(feature, axis=1, inplace=True)
+        df.drop(features, axis=1, inplace=True)
         st.session_state.df = df
-        st.success(f"{feature} removed successfully!")
-        # display()
+        st.success(f"{features} removed successfully!")
 
 def handle_missing_values():
     df = st.session_state.df
     st.subheader("Handling Missing Values")
-    st.write("\n")
 
-    if df.isnull().sum().sum() == 0:
-        st.success("No missing values found in the dataset.")
+    if 'missing_values_handled' not in st.session_state:
+        st.session_state.missing_values_handled = False
+
+    if st.session_state.missing_values_handled:
+        st.success("Missing values have already been handled. This section is now disabled.")
     else:
-        st.write("Select the method to handle missing values")
-        methods = st.selectbox("Select the method", ("Drop", "Fill with Mean", "Fill with Median", "Fill with Mode"))
-        if st.button("Apply", key="missing_value_button"):
-            if methods == "Drop":
-                df.dropna(inplace=True)
-                st.success("Missing values dropped successfully!")
+        methods = st.selectbox("Select the method to handle missing values", ("Remove Rows with Missing Values", "Fill with Mean", "Fill with Median", "Fill with Mode"))
+        if st.button("Apply", key="missing_values_button"):
+            if methods == "Remove Rows with Missing Values":
+                df = df.dropna()
+                st.success("Rows with missing values removed successfully!")
             elif methods == "Fill with Mean":
-                df.fillna(df.mean(), inplace=True)
+                df = df.fillna(df.mean())
                 st.success("Missing values filled with Mean successfully!")
             elif methods == "Fill with Median":
-                df.fillna(df.median(), inplace=True)
+                df = df.fillna(df.median())
                 st.success("Missing values filled with Median successfully!")
             elif methods == "Fill with Mode":
-                df.fillna(df.mode().iloc[0], inplace=True)
+                df = df.fillna(df.mode().iloc[0])
                 st.success("Missing values filled with Mode successfully!")
+
             st.session_state.df = df
+            st.session_state.missing_values_handled = True
             # display()
+
 
 def handle_outliers():
     df = st.session_state.df
     st.subheader("Handling Outliers")
-    methods = st.selectbox("Select the method to handle outliers", ("Remove Outliers", "Cap Outliers", "Fill with Median"))
-    if st.button("Apply", key="outlier_button"):
-        if methods == "Remove Outliers":
-            for col in df.columns:
-                if df[col].dtype != "object":
-                    Q1 = df[col].quantile(0.25)
-                    Q3 = df[col].quantile(0.75)
-                    IQR = Q3 - Q1
-                    df = df[~((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR)))]
-            st.success("Outliers removed successfully!")
-        elif methods == "Cap Outliers":
-            for col in df.columns:
-                if df[col].dtype != "object":
-                    Q1 = df[col].quantile(0.25)
-                    Q3 = df[col].quantile(0.75)
-                    IQR = Q3 - Q1
-                    df[col] = np.where(df[col] < (Q1 - 1.5 * IQR), (Q1 - 1.5 * IQR), df[col])
-                    df[col] = np.where(df[col] > (Q3 + 1.5 * IQR), (Q3 + 1.5 * IQR), df[col])
-            st.success("Outliers capped successfully!")
-        elif methods == "Fill with Median":
-            for col in df.columns:
-                if df[col].dtype != "object":
-                    Q1 = df[col].quantile(0.25)
-                    Q3 = df[col].quantile(0.75)
-                    IQR = Q3 - Q1
-                    df[col] = np.where(df[col] < (Q1 - 1.5 * IQR), df[col].median(), df[col])
-                    df[col] = np.where(df[col] > (Q3 + 1.5 * IQR), df[col].median(), df[col])
-            st.success("Outliers filled with Median successfully!")
-        st.session_state.df = df
-        # display()
+
+    if 'outliers_removed' not in st.session_state:
+        st.session_state.outliers_removed = False
+
+    if st.session_state.outliers_removed:
+        st.success("Outliers have already been removed. This section is now disabled.")
+    else:
+        methods = st.selectbox("Select the method to handle outliers", ("Remove Outliers", "Cap Outliers", "Fill with Median"))
+        if st.button("Apply", key="outlier_button"):
+            if methods == "Remove Outliers":
+                for col in df.columns:
+                    if df[col].dtype != "object":
+                        Q1 = df[col].quantile(0.25)
+                        Q3 = df[col].quantile(0.75)
+                        IQR = Q3 - Q1
+                        df = df[~((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR)))]
+                st.success("Outliers removed successfully!")
+            elif methods == "Cap Outliers":
+                for col in df.columns:
+                    if df[col].dtype != "object":
+                        Q1 = df[col].quantile(0.25)
+                        Q3 = df[col].quantile(0.75)
+                        IQR = Q3 - Q1
+                        df[col] = np.where(df[col] < (Q1 - 1.5 * IQR), (Q1 - 1.5 * IQR), df[col])
+                        df[col] = np.where(df[col] > (Q3 + 1.5 * IQR), (Q3 + 1.5 * IQR), df[col])
+                st.success("Outliers capped successfully!")
+            elif methods == "Fill with Median":
+                for col in df.columns:
+                    if df[col].dtype != "object":
+                        Q1 = df[col].quantile(0.25)
+                        Q3 = df[col].quantile(0.75)
+                        IQR = Q3 - Q1
+                        df[col] = np.where(df[col] < (Q1 - 1.5 * IQR), df[col].median(), df[col])
+                        df[col] = np.where(df[col] > (Q3 + 1.5 * IQR), df[col].median(), df[col])
+                st.success("Outliers filled with Median successfully!")
+
+            st.session_state.df = df
+            st.session_state.outliers_removed = True
 
 def categorical_feature_encoding():
     df = st.session_state.df
     st.subheader("Categorical Feature Encoding")
-    if len(df.select_dtypes(include="object").columns.tolist()) == 0:
+    categorical_columns = df.select_dtypes(include="object").columns.tolist()
+
+    if len(categorical_columns) == 0:
         st.success("No categorical features found in the dataset.")
     else:
-        methods = st.selectbox("Select the method to encode categorical features", ("Label Encoding", "One Hot Encoding"))
-        if st.button("Apply", key="encoding_button"):
-            if methods == "Label Encoding":
-                for col in df.columns:
-                    if df[col].dtype == "object":
-                        df[col] = df[col].astype("category").cat.codes
-                st.success("Label Encoding applied successfully!")
-            elif methods == "One Hot Encoding":
-                df = pd.get_dummies(df, drop_first=True)
-                st.success("One Hot Encoding applied successfully!")
-            st.session_state.df = df
-            display()
+        encoding_methods = ["Label Encoding", "One Hot Encoding"]
+        
+        st.write("Select features for Label Encoding:")
+        label_encoding_features = st.multiselect("Label Encoding", categorical_columns)
+
+        st.write("Select features for One Hot Encoding:")
+        one_hot_encoding_features = st.multiselect("One Hot Encoding", [col for col in categorical_columns if col not in label_encoding_features])
+
+        if st.button("Apply Encoding", key="encoding_button"):
+            if not label_encoding_features and not one_hot_encoding_features:
+                st.error("No features selected for encoding.")
+            else:
+                try:
+                    # Apply label encoding
+                    for column in label_encoding_features:
+                        df[column] = df[column].astype("category").cat.codes
+
+                    # Apply one hot encoding
+                    if one_hot_encoding_features:
+                        df = pd.get_dummies(df, columns=one_hot_encoding_features, drop_first=True)
+
+                    st.session_state.df = df
+                    st.success("Categorical encoding applied successfully!")
+                    display()
+                except Exception as e:
+                    st.error(f"Error in encoding: {e}")
+
+
+
+def feature_engineering():
+    df = st.session_state.df
+    st.subheader("Feature Engineering")
+    col_list = df.columns.tolist()
+    selected_features = st.multiselect("Select the features to create new feature:", col_list)
+    new_feature_name = st.text_input("Enter new feature name:")
+    operation = st.selectbox("Select operation:", ["Sum", "Difference", "Product", "Division", "Custom"])
+    # custom_operation = st.text_input("Enter custom operation (Python syntax):") if operation == "Custom" else ""
+
+    if st.button("Create Feature", key="create_feature_button"):
+        if len(selected_features) < 2 and operation != "Custom":
+            st.error("Select at least two features to create a new feature.")
+        else:
+            try:
+                if operation == "Sum":
+                    df[new_feature_name] = df[selected_features].sum(axis=1)
+                elif operation == "Difference":
+                    df[new_feature_name] = df[selected_features[0]] - df[selected_features[1]]
+                elif operation == "Product":
+                    df[new_feature_name] = df[selected_features].prod(axis=1)
+                elif operation == "Division":
+                    df[new_feature_name] = df[selected_features[0]] / df[selected_features[1]]
+                # elif operation == "Custom":
+                #     df[new_feature_name] = df.apply(lambda row: eval(custom_operation, {"np": np, "pd": pd}, row), axis=1)
+                # st.session_state.df = df
+                st.success(f"New feature '{new_feature_name}' created successfully!")
+                display()
+            except Exception as e:
+                st.error(f"Error in custom operation: {e}")
 
 def split_data():
     df = st.session_state.df
     st.subheader("Splitting the dataset into features and target variable")
-    col1, col2 = st.columns(2)
-    target = col1.selectbox("Select the target variable", df.columns.tolist())
-    sets = col2.selectbox("Select the type of split", ["Train and Test", "Train, Validation and Test"])
-    st.session_state.split_type = sets
-    col1, col2, col3 = st.columns([1, 0.5, 1])
-    if col2.button("Apply", key="split"):
-        st.session_state.split_done = True
-        if sets == "Train and Test":
+
+    if 'split_done' not in st.session_state:
+        st.session_state.split_done = False
+
+    if st.session_state.split_done:
+        st.success("Dataset has already been split. This section is now disabled.")
+    else:
+        col1, col2 = st.columns(2)
+        target = col1.selectbox("Select the target variable", df.columns.tolist())
+        split_type = col2.selectbox("Select the type of split", ["Train and Test", "Train, Validation and Test"])
+
+        test_size = st.slider("Select test size ratio", 0.1, 0.5, 0.3)
+        validation_size = st.slider("Select validation size ratio (from remaining data after test split)", 0.1, 0.5, 0.2) if split_type == "Train, Validation and Test" else None
+
+        if st.button("Apply", key="split"):
+            st.session_state.split_done = True
             X = df.drop(target, axis=1)
             y = df[target]
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-            st.session_state.X_train = X_train
-            st.session_state.X_test = X_test
-            st.session_state.y_train = y_train
-            st.session_state.y_test = y_test
-            st.success("Dataset split successfully. You can now proceed to Building the model.")
-        elif sets == "Train, Validation and Test":
-            X = df.drop(target, axis=1)
-            y = df[target]
-            X_train, X_rem, y_train, y_rem = train_test_split(X, y, test_size=0.3, random_state=42)
-            X_test, X_val, y_test, y_val = train_test_split(X_rem, y_rem, test_size=0.5, random_state=42)
-            st.session_state.X_train = X_train
-            st.session_state.X_test = X_test
-            st.session_state.X_val = X_val
-            st.session_state.y_train = y_train
-            st.session_state.y_test = y_test
-            st.session_state.y_val = y_val
-            st.success("Dataset split successfully. You can now proceed to Building the model.")
+
+            if split_type == "Train and Test":
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+                st.session_state.X_train = X_train
+                st.session_state.X_test = X_test
+                st.session_state.y_train = y_train
+                st.session_state.y_test = y_test
+                st.success("Dataset split successfully into Train and Test sets.")
+            elif split_type == "Train, Validation and Test":
+                X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=test_size, random_state=42)
+                X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=validation_size, random_state=42)
+                st.session_state.X_train = X_train
+                st.session_state.X_test = X_test
+                st.session_state.X_val = X_val
+                st.session_state.y_train = y_train
+                st.session_state.y_test = y_test
+                st.session_state.y_val = y_val
+                st.success("Dataset split successfully into Train, Validation, and Test sets.")
+
 
 def model_training():
     st.subheader("Model Selection and Training")
@@ -184,13 +250,16 @@ def main():
         if uploaded_file:
             st.success("File uploaded successfully!")
             df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
+
             if 'df' not in st.session_state:
                 st.session_state.df = df
+
             display()
-            remove_feature()
             handle_missing_values()
             handle_outliers()
+            remove_feature()
             categorical_feature_encoding()
+            feature_engineering()
             split_data()
             model_training()
             model_evaluation()
