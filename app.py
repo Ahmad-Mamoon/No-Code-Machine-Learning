@@ -1,70 +1,65 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-# import streamlit_scrollable_textbox as stx
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, confusion_matrix
 
-
-def display(df):
-
+def display():
     st.write("\n")
     st.subheader("Displaying Dataset")
+    df = st.session_state.df
     st.write(df.shape)
     st.dataframe(df, use_container_width=True)
     st.write("\n")
 
-
-def remove_feature(df):
+## TODO: Add option to select multiple columns at once to remove.
+def remove_feature():
+    df = st.session_state.df
     col_list = df.columns.tolist()
     st.subheader("Select the feature to remove")
     feature = st.selectbox("Features in dataframe are: ", col_list)
-    if st.button("Remove"):
+
+    if st.button("Remove", key="remove_button"):
         df.drop(feature, axis=1, inplace=True)
+        df.dropduplicates(feature, axis=1, inplace=True)
+        st.session_state.df = df
         st.success(f"{feature} removed successfully!")
-        st.write("\n")
+        # display()
 
-    return df
-
-def handle_missing_values(df):
+def handle_missing_values():
+    df = st.session_state.df
     st.subheader("Handling Missing Values")
     st.write("\n")
-    
-    if sum(df.isnull().sum().values.tolist()) == 0:
-        st.success("No missing values found in the dataset.")
 
+    if df.isnull().sum().sum() == 0:
+        st.success("No missing values found in the dataset.")
     else:
         st.write("Select the method to handle missing values")
         methods = st.selectbox("Select the method", ("Drop", "Fill with Mean", "Fill with Median", "Fill with Mode"))
-        
-        if st.button("Apply"):
+        if st.button("Apply", key="missing_value_button"):
             if methods == "Drop":
                 df.dropna(inplace=True)
                 st.success("Missing values dropped successfully!")
-                st.write("\n")
             elif methods == "Fill with Mean":
                 df.fillna(df.mean(), inplace=True)
                 st.success("Missing values filled with Mean successfully!")
-                st.write("\n")
             elif methods == "Fill with Median":
                 df.fillna(df.median(), inplace=True)
                 st.success("Missing values filled with Median successfully!")
-                st.write("\n")
             elif methods == "Fill with Mode":
                 df.fillna(df.mode().iloc[0], inplace=True)
                 st.success("Missing values filled with Mode successfully!")
-                st.write("\n")
+            st.session_state.df = df
+            # display()
 
-
-    return df
-
-
-def handle_outliers(df):
+def handle_outliers():
+    df = st.session_state.df
     st.subheader("Handling Outliers")
-    st.write("\n")
-
-    st.write("Select the method to handle outliers")
-    methods = st.selectbox("Select the method", ("Remove Outliers", "Cap Outliers", "Fill with Median"))
-
-    if st.button("Apply"):
+    methods = st.selectbox("Select the method to handle outliers", ("Remove Outliers", "Cap Outliers", "Fill with Median"))
+    if st.button("Apply", key="outlier_button"):
         if methods == "Remove Outliers":
             for col in df.columns:
                 if df[col].dtype != "object":
@@ -73,8 +68,6 @@ def handle_outliers(df):
                     IQR = Q3 - Q1
                     df = df[~((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR)))]
             st.success("Outliers removed successfully!")
-            st.write("\n")
-
         elif methods == "Cap Outliers":
             for col in df.columns:
                 if df[col].dtype != "object":
@@ -84,8 +77,6 @@ def handle_outliers(df):
                     df[col] = np.where(df[col] < (Q1 - 1.5 * IQR), (Q1 - 1.5 * IQR), df[col])
                     df[col] = np.where(df[col] > (Q3 + 1.5 * IQR), (Q3 + 1.5 * IQR), df[col])
             st.success("Outliers capped successfully!")
-            st.write("\n")
-
         elif methods == "Fill with Median":
             for col in df.columns:
                 if df[col].dtype != "object":
@@ -95,41 +86,31 @@ def handle_outliers(df):
                     df[col] = np.where(df[col] < (Q1 - 1.5 * IQR), df[col].median(), df[col])
                     df[col] = np.where(df[col] > (Q3 + 1.5 * IQR), df[col].median(), df[col])
             st.success("Outliers filled with Median successfully!")
-            st.write("\n")
+        st.session_state.df = df
+        # display()
 
-    return df
-
-
-def categorical_feature_encoding(df):
+def categorical_feature_encoding():
+    df = st.session_state.df
     st.subheader("Categorical Feature Encoding")
-    st.write("\n")
-
     if len(df.select_dtypes(include="object").columns.tolist()) == 0:
         st.success("No categorical features found in the dataset.")
     else:
-        st.write("Select the method to encode categorical features")
-        methods = st.selectbox("Select the method", ("Label Encoding", "One Hot Encoding"))
-
-        if st.button("Apply"):
+        methods = st.selectbox("Select the method to encode categorical features", ("Label Encoding", "One Hot Encoding"))
+        if st.button("Apply", key="encoding_button"):
             if methods == "Label Encoding":
                 for col in df.columns:
                     if df[col].dtype == "object":
                         df[col] = df[col].astype("category").cat.codes
                 st.success("Label Encoding applied successfully!")
-                st.write("\n")
-
             elif methods == "One Hot Encoding":
                 df = pd.get_dummies(df, drop_first=True)
                 st.success("One Hot Encoding applied successfully!")
-                st.write("\n")
+            st.session_state.df = df
+            display()
 
-    return df
-
-
-def split_data(df):
+def split_data():
+    df = st.session_state.df
     st.subheader("Splitting the dataset into features and target variable")
-    st.write("\n")
-
     col1, col2 = st.columns(2)
     target = col1.selectbox("Select the target variable", df.columns.tolist())
     sets = col2.selectbox("Select the type of split", ["Train and Test", "Train, Validation and Test"])
@@ -137,9 +118,7 @@ def split_data(df):
     col1, col2, col3 = st.columns([1, 0.5, 1])
     if col2.button("Apply", key="split"):
         st.session_state.split_done = True
-    
         if sets == "Train and Test":
-            from sklearn.model_selection import train_test_split
             X = df.drop(target, axis=1)
             y = df[target]
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
@@ -148,9 +127,7 @@ def split_data(df):
             st.session_state.y_train = y_train
             st.session_state.y_test = y_test
             st.success("Dataset split successfully. You can now proceed to Building the model.")
-
         elif sets == "Train, Validation and Test":
-            from sklearn.model_selection import train_test_split
             X = df.drop(target, axis=1)
             y = df[target]
             X_train, X_rem, y_train, y_rem = train_test_split(X, y, test_size=0.3, random_state=42)
@@ -163,46 +140,62 @@ def split_data(df):
             st.session_state.y_val = y_val
             st.success("Dataset split successfully. You can now proceed to Building the model.")
 
-    return X, y
+def model_training():
+    st.subheader("Model Selection and Training")
+    model_choice = st.selectbox("Select the Model", ["Random Forest", "Logistic Regression", "Support Vector Machine"])
+    if st.button("Train Model", key="train_model"):
+        if "split_done" in st.session_state and st.session_state.split_done:
+            X_train = st.session_state.X_train
+            y_train = st.session_state.y_train
+            if model_choice == "Random Forest":
+                model = RandomForestClassifier()
+            elif model_choice == "Logistic Regression":
+                model = LogisticRegression()
+            elif model_choice == "Support Vector Machine":
+                model = SVC()
+            model.fit(X_train, y_train)
+            st.session_state.model = model
+            st.success(f"{model_choice} trained successfully!")
+        else:
+            st.error("Please split the data before training the model.")
+
+def model_evaluation():
+    st.subheader("Model Evaluation")
+    if "model" in st.session_state:
+        model = st.session_state.model
+        X_test = st.session_state.X_test
+        y_test = st.session_state.y_test
+        y_pred = model.predict(X_test)
+        accuracy = accuracy_score(y_test, y_pred)
+        cm = confusion_matrix(y_test, y_pred)
+        st.write("Accuracy:", accuracy)
+        st.write("Confusion Matrix:")
+        st.write(cm)
+    else:
+        st.error("Please train the model before evaluating.")
 
 def main():
-    st.set_page_config(page_title="UI based Machine Learning", page_icon=":computer:", layout="wide")
-
-    st.title("UI based Machine Learning" )
+    st.set_page_config(page_title="No Code Machine Learning", page_icon=":computer:", layout="wide")
+    st.title("No Code Machine Learning")
     st.subheader("Upload your CSV file")
 
     with st.spinner("Uploading file..."):
         uploaded_file = st.file_uploader("Choose a file", type=["csv", "txt"])
-
         if uploaded_file:
             st.success("File uploaded successfully!")
-
-            # Read the file
-            df = pd.read_csv(uploaded_file)
-
-            # Display the top 5 rows of uploaded file
-            dataframe = display(df)
-            
-            # Remove Feature
-            data = remove_feature(df)
-
-            # Handling Missing Values
-            data = handle_missing_values(data)
-
-            # Handle Outliers
-            data = handle_outliers(data)
-
-            # Categorical Feature Encoding
-            data = categorical_feature_encoding(data)
-
-            # Splitting the dataset into features and target variable
-            X, y = split_data(data)
+            df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
+            if 'df' not in st.session_state:
+                st.session_state.df = df
+            display()
+            remove_feature()
+            handle_missing_values()
+            handle_outliers()
+            categorical_feature_encoding()
+            split_data()
+            model_training()
+            model_evaluation()
 
 
-            # Model Selection
-
-            
-            # Number of epochs
 
 if __name__ == '__main__':
     main()
