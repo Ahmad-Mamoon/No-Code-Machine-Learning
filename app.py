@@ -6,6 +6,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def display():
     st.write("\n")
@@ -14,6 +16,60 @@ def display():
     st.write(df.shape)
     st.dataframe(df, use_container_width=True)
     st.write("\n")
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def plot_histogram(df):
+    st.subheader("Histogram")
+    column = st.selectbox("Select column for histogram", df.columns)
+    plt.figure(figsize=(10, 4))
+    sns.histplot(df[column], kde=True)
+    st.pyplot(plt.gcf())
+
+def plot_scatter(df):
+    st.subheader("Scatter Plot")
+    columns = st.multiselect("Select two columns for scatter plot", df.columns)
+    if len(columns) == 2:
+        plt.figure(figsize=(10, 4))
+        sns.scatterplot(data=df, x=columns[0], y=columns[1])
+        st.pyplot(plt.gcf())
+
+def plot_box(df):
+    st.subheader("Box Plot")
+    numerical_df = df.select_dtypes(include=['number'])
+    column = st.selectbox("Select column for box plot", numerical_df.columns)
+    plt.figure(figsize=(10, 4))
+    sns.boxplot(y=df[column])
+    st.pyplot(plt.gcf())
+
+def plot_heatmap(df):
+    st.subheader("Correlation Heatmap")
+    numerical_df = df.select_dtypes(include=['number'])
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(numerical_df.corr(), annot=True, cmap="coolwarm")
+    st.pyplot(plt.gcf())
+
+
+def display_graphs():
+    df = st.session_state.df
+    st.subheader("Data Visualization")
+    st.write("Select the types of graphs to display:")
+    
+    plot_histogram_checkbox = st.checkbox("Histogram")
+    plot_scatter_checkbox = st.checkbox("Scatter Plot")
+    plot_box_checkbox = st.checkbox("Box Plot")
+    plot_heatmap_checkbox = st.checkbox("Correlation Heatmap")
+
+    if plot_histogram_checkbox:
+        plot_histogram(df)
+    if plot_scatter_checkbox:
+        plot_scatter(df)
+    if plot_box_checkbox:
+        plot_box(df)
+    if plot_heatmap_checkbox:
+        plot_heatmap(df)
 
 
 def remove_feature():
@@ -255,6 +311,7 @@ def main():
                 st.session_state.df = df
 
             display()
+            display_graphs()
             handle_missing_values()
             handle_outliers()
             remove_feature()
